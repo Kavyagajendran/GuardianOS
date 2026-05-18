@@ -114,7 +114,7 @@ function App() {
         <div className="grid grid-cols-5 gap-2 mt-2">
           <StatBox icon={<Cpu size={14}/>} label="CPU" value={`${metrics.cpu.usage}%`} color="text-neon-cyan" />
           <StatBox icon={<HardDrive size={14}/>} label="RAM" value={`${metrics.ram.percent}%`} color="text-neon-purple" />
-          <StatBox icon={<Wifi size={14}/>} label="NET" value={`${(metrics.network.download_speed_bytes / 1024 / 1024).toFixed(1)}M`} color="text-neon-green" />
+          <StatBox icon={<Wifi size={14}/>} label="NET" value={formatNetworkSpeed(metrics.network.download_speed_bytes)} color="text-neon-green" />
           <StatBox icon={<Battery size={14}/>} label="PWR" value={metrics.battery ? `${metrics.battery.percent}%` : 'AC'} color="text-yellow-400" />
           <StatBox icon={<ShieldAlert size={14}/>} label="AI" value={metrics.ai_status} color="text-neon-pink" />
         </div>
@@ -134,6 +134,15 @@ function App() {
     </div>
   );
 }
+
+// Formats bytes per second dynamically into a compact HUD label
+const formatNetworkSpeed = (bytes) => {
+  if (!bytes || bytes < 0) return '0 K';
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(0)} K`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} M`;
+};
 
 const StatBox = ({ icon, label, value, color }) => (
   <div className="flex flex-col items-center justify-center p-2 bg-white/40 rounded border border-gray-300/30 w-full overflow-hidden">

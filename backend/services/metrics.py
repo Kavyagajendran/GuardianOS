@@ -1,7 +1,14 @@
 import psutil
 import time
 
+# Global cache to track network speed precisely by elapsed time delta
+_last_net_time = 0
+_last_bytes_sent = 0
+_last_bytes_recv = 0
+
 def get_system_metrics():
+    global _last_net_time, _last_bytes_sent, _last_bytes_recv
+    
     # CPU
     cpu_percent = psutil.cpu_percent(interval=None)
     cpu_freq = psutil.cpu_freq()
@@ -9,13 +16,23 @@ def get_system_metrics():
     # RAM
     ram = psutil.virtual_memory()
     
-    # Network (Calculate speed by delta)
-    net_io_1 = psutil.net_io_counters()
-    time.sleep(0.1) # Small delay to calculate speed
-    net_io_2 = psutil.net_io_counters()
+    # Network (Calculate speed by precise time delta)
+    net_io = psutil.net_io_counters()
+    current_time = time.time()
     
-    bytes_sent = net_io_2.bytes_sent - net_io_1.bytes_sent
-    bytes_recv = net_io_2.bytes_recv - net_io_1.bytes_recv
+    if _last_net_time == 0:
+        bytes_sent = 0
+        bytes_recv = 0
+    else:
+        time_delta = current_time - _last_net_time
+        if time_delta <= 0:
+            time_delta = 0.001 # Prevent division by zero
+        bytes_sent = int((net_io.bytes_sent - _last_bytes_sent) / time_delta)
+        bytes_recv = int((net_io.bytes_recv - _last_bytes_recv) / time_delta)
+        
+    _last_net_time = current_time
+    _last_bytes_sent = net_io.bytes_sent
+    _last_bytes_recv = net_io.bytes_recv
     
     # Processes
     processes = []
@@ -80,8 +97,8 @@ def get_system_metrics():
             "percent": ram.percent
         },
         "network": {
-            "upload_speed_bytes": bytes_sent * 10,
-            "download_speed_bytes": bytes_recv * 10
+            "upload_speed_bytes": bytes_sent,
+            "download_speed_bytes": bytes_recv
         },
         "gpu": gpu_stats,
         "battery": battery_stats,
