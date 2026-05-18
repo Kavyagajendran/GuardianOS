@@ -3,9 +3,8 @@ import { motion } from 'framer-motion';
 import { ShieldAlert, Cpu, HardDrive, Activity, Wifi, Terminal, Battery } from 'lucide-react';
 import Dashboard from './Dashboard';
 
-// Safe access to Electron's ipcRenderer
-const electron = window.require ? window.require('electron') : null;
-const ipcRenderer = electron ? electron.ipcRenderer : null;
+// Safe access to secure Electron IPC bridge
+const ipcRenderer = window.electronAPI;
 
 function App() {
   const [metrics, setMetrics] = useState(null);
