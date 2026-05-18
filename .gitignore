@@ -1,0 +1,16 @@
+node_modules/
+__pycache__/
+*.pyc
+.env
+venv/
+env/
+.DS_Store
+dist/
+build/
+.next/
+out/
+coverage/
+.idea/
+.vscode/
+frontend_fixed/
+frontend_temp_install/
