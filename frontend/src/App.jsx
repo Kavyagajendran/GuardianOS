@@ -14,25 +14,44 @@ function App() {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    // Connect to WebSocket
-    const ws = new WebSocket('ws://localhost:8000/ws/metrics');
-    
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      setMetrics(data);
-      if (data.logs) {
-        setLogs(data.logs);
-      }
+    let ws;
+    let reconnectTimeout;
+
+    const connect = () => {
+      ws = new WebSocket('ws://localhost:8000/ws/metrics');
       
-      const timeStr = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' });
-      setHistory(prev => {
-        const newHistory = [...prev, { time: timeStr, cpu: data.cpu.usage, ram: data.ram.percent }];
-        if (newHistory.length > 20) newHistory.shift();
-        return newHistory;
-      });
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        setMetrics(data);
+        if (data.logs) {
+          setLogs(data.logs);
+        }
+        
+        const timeStr = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' });
+        setHistory(prev => {
+          const newHistory = [...prev, { time: timeStr, cpu: data?.cpu?.usage ?? 0, ram: data?.ram?.percent ?? 0 }];
+          if (newHistory.length > 20) newHistory.shift();
+          return newHistory;
+        });
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket disconnected. Reconnecting in 2 seconds...');
+        reconnectTimeout = setTimeout(connect, 2000);
+      };
+
+      ws.onerror = (err) => {
+        console.error('WebSocket error:', err);
+        ws.close();
+      };
     };
 
-    return () => ws.close();
+    connect();
+
+    return () => {
+      if (ws) ws.close();
+      clearTimeout(reconnectTimeout);
+    };
   }, []);
 
   // Handle dynamic window resizing based on expanded/collapsed state
@@ -74,8 +93,29 @@ function App() {
 
   if (!metrics) {
     return (
-      <div className="flex items-center justify-center h-screen bg-white/60 drag-region rounded-xl border border-gray-300/30">
-        <div className="text-neon-cyan animate-pulse-fast text-lg font-orbitron tracking-widest">INITIALIZING...</div>
+      <div 
+        className="text-white min-h-screen p-4 flex flex-col font-mono bg-transparent"
+        onMouseLeave={() => {
+          if (ipcRenderer) {
+            ipcRenderer.send('set-ignore-mouse-events', true, { forward: true });
+          }
+        }}
+      >
+        <div className="glass-panel p-4 drag-region flex flex-col gap-2 relative overflow-hidden bg-black/95 border border-neon-cyan/40 shadow-[0_0_20px_rgba(8,247,254,0.15)] rounded-xl">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-blue via-neon-purple to-neon-pink"></div>
+          
+          <div className="flex justify-between items-center w-full">
+            <div className="flex items-center gap-2">
+              <Activity className="text-neon-cyan animate-pulse" size={20} />
+              <span className="font-orbitron font-bold text-lg tracking-wider text-neon-blue">GuardianOS</span>
+            </div>
+            <span className="text-[9px] font-bold tracking-widest text-neon-pink px-2 py-0.5 bg-neon-pink/10 rounded border border-neon-pink/30 animate-pulse">OFFLINE</span>
+          </div>
+          
+          <div className="text-center py-2 text-[10px] text-gray-400 font-orbitron tracking-widest animate-pulse mt-1">
+            CONNECTING TO SYSTEM BACKEND...
+          </div>
+        </div>
       </div>
     );
   }
@@ -112,11 +152,11 @@ function App() {
 
         {/* Mini Stats (Always visible) */}
         <div className="grid grid-cols-5 gap-2 mt-2">
-          <StatBox icon={<Cpu size={14}/>} label="CPU" value={`${metrics.cpu.usage}%`} color="text-neon-cyan" />
-          <StatBox icon={<HardDrive size={14}/>} label="RAM" value={`${metrics.ram.percent}%`} color="text-neon-purple" />
-          <StatBox icon={<Wifi size={14}/>} label="NET" value={formatNetworkSpeed(metrics.network.download_speed_bytes)} color="text-neon-green" />
-          <StatBox icon={<Battery size={14}/>} label="PWR" value={metrics.battery ? `${metrics.battery.percent}%` : 'AC'} color="text-yellow-400" />
-          <StatBox icon={<ShieldAlert size={14}/>} label="AI" value={metrics.ai_status} color="text-neon-pink" />
+          <StatBox icon={<Cpu size={14}/>} label="CPU" value={`${metrics?.cpu?.usage ?? 0}%`} color="text-neon-cyan" />
+          <StatBox icon={<HardDrive size={14}/>} label="RAM" value={`${metrics?.ram?.percent ?? 0}%`} color="text-neon-purple" />
+          <StatBox icon={<Wifi size={14}/>} label="NET" value={formatNetworkSpeed(metrics?.network?.download_speed_bytes)} color="text-neon-green" />
+          <StatBox icon={<Battery size={14}/>} label="PWR" value={metrics?.battery ? `${metrics.battery.percent}%` : 'AC'} color="text-yellow-400" />
+          <StatBox icon={<ShieldAlert size={14}/>} label="AI" value={metrics?.ai_status ?? 'MONITORING'} color="text-neon-pink" />
         </div>
       </motion.div>
 
