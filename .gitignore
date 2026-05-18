@@ -14,3 +14,5 @@ coverage/
 .vscode/
 frontend_fixed/
 frontend_temp_install/
+dist-electron/
+frontend/dist-electron/
