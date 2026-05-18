@@ -46,8 +46,22 @@ function createWindow() {
   });
 
   // Stays on top of everything, including fullscreen apps
-  win.setAlwaysOnTop(true, 'screen-saver');
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  try {
+    win.setAlwaysOnTop(true, 'screen-saver');
+  } catch (err) {
+    console.error("Failed to set always-on-top screen-saver level:", err);
+    try {
+      win.setAlwaysOnTop(true);
+    } catch (e) {
+      console.error("Failed to set basic always-on-top:", e);
+    }
+  }
+
+  try {
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  } catch (err) {
+    console.error("Failed to set visible on all workspaces:", err);
+  }
 
   // Make the window ignore mouse events if we want it strictly as an overlay, 
   // but we want it interactive, so we don't use win.setIgnoreMouseEvents(true) entirely.
