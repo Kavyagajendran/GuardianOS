@@ -4,4 +4,4 @@ psutil
 websockets
 pydantic
 groq
-pydantic
+python-dotenv

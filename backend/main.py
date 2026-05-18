@@ -1,4 +1,7 @@
 import asyncio
+from dotenv import load_dotenv
+load_dotenv() # Load environment variables from .env file
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from services.metrics import get_system_metrics
@@ -50,6 +53,7 @@ async def websocket_metrics(websocket: WebSocket):
             ai_data = os_ai.analyze_metrics(metrics)
             metrics["ai_status"] = ai_data["status"]
             metrics["logs"] = ai_data["recent_logs"]
+            metrics["ai_data"] = ai_data["ai_data"]
             
             await websocket.send_json(metrics)
             await asyncio.sleep(1) # Send metrics every 1 second

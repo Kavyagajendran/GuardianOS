@@ -53,6 +53,20 @@ def get_system_metrics():
     except ImportError:
         pass
         
+    # Battery
+    battery_stats = None
+    try:
+        if hasattr(psutil, 'sensors_battery'):
+            batt = psutil.sensors_battery()
+            if batt:
+                battery_stats = {
+                    "percent": batt.percent,
+                    "plugged": batt.power_plugged,
+                    "secsleft": batt.secsleft
+                }
+    except Exception:
+        pass
+        
     return {
         "timestamp": time.time(),
         "cpu": {
@@ -70,6 +84,7 @@ def get_system_metrics():
             "download_speed_bytes": bytes_recv * 10
         },
         "gpu": gpu_stats,
+        "battery": battery_stats,
         "processes": top_processes,
         "ai_status": "MONITORING", # Dummy status for now
     }

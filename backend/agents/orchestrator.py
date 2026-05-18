@@ -17,7 +17,11 @@ class AIOperatingSystem:
             self.client = Groq(api_key=GROQ_API_KEY)
         except Exception as e:
             print(f"Failed to initialize Groq: {e}")
-        self.current_suggestion = "Monitoring system state..."
+        self.current_ai_data = {
+            "suggestion": "Monitoring system state...",
+            "threat": {"risk": "LOW", "description": "System operating normally."},
+            "optimization": {"status": "ACTIVE", "description": "No optimizations required."}
+        }
         
     def add_log(self, agent, message):
         timestamp = time.strftime('%H:%M:%S')
@@ -46,20 +50,35 @@ Current System State:
 Top Processes:
 {top_procs}
 
-Provide a ONE sentence actionable suggestion or observation about the current processes or system state. Be concise and authoritative."""
+Analyze the system state and respond ONLY with a valid JSON object matching this exact structure:
+{{
+  "suggestion": "ONE sentence actionable suggestion or observation about the current processes or system state.",
+  "threat": {{
+    "risk": "LOW or MEDIUM or HIGH",
+    "description": "Short description of any potential threats or anomalies based on the running processes and network."
+  }},
+  "optimization": {{
+    "status": "OPTIMIZATION or CLEANING or MONITORING",
+    "description": "Short description of what could be optimized right now."
+  }}
+}}"""
             
             if self.client:
                 try:
                     response = self.client.chat.completions.create(
                         messages=[{"role": "user", "content": prompt}],
                         model="llama-3.3-70b-versatile",
-                        max_tokens=50,
-                        temperature=0.3
+                        max_tokens=300,
+                        temperature=0.3,
+                        response_format={"type": "json_object"}
                     )
-                    self.current_suggestion = response.choices[0].message.content.strip()
-                    self.add_log("GuardianOS LLM", self.current_suggestion)
+                    content = response.choices[0].message.content.strip()
+                    import json
+                    parsed = json.loads(content)
+                    self.current_ai_data = parsed
+                    self.add_log("GuardianOS LLM", parsed.get("suggestion", "System analyzed."))
                 except Exception as e:
-                    self.current_suggestion = f"LLM Analysis failed: {str(e)}"
+                    self.current_ai_data["suggestion"] = f"LLM Analysis failed: {str(e)}"
                     self.add_log("Error Agent", f"Groq API Error: {str(e)}")
             
             if cpu > 85:
@@ -72,7 +91,7 @@ Provide a ONE sentence actionable suggestion or observation about the current pr
         return {
             "status": self.state,
             "recent_logs": self.logs[-5:],
-            "llm_suggestion": self.current_suggestion
+            "ai_data": self.current_ai_data
         }
 
 # Global singleton
